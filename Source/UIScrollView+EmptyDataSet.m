@@ -480,7 +480,7 @@ static NSString *const DZNSwizzleInfoSelectorKey = @"selector";
 // Based on Bryce Buchanan's swizzling technique http://blog.newrelic.com/2014/04/16/right-way-to-swizzle/
 // And Juzzin's ideas https://github.com/juzzin/JUSEmptyViewController
 
-void dzn_original_implementation(id self, SEL _cmd)
+static void dzn_original_implementation(id self, SEL _cmd)
 {
     // Fetch original implementation from lookup table
     NSString *key = dzn_implementationKey(self, _cmd);
@@ -500,7 +500,7 @@ void dzn_original_implementation(id self, SEL _cmd)
     }
 }
 
-NSString *dzn_implementationKey(id target, SEL selector)
+static NSString *dzn_implementationKey(id target, SEL selector)
 {
     if (!target || !selector) {
         return nil;
