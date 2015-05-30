@@ -221,13 +221,11 @@ static char const * const kEmptyDataSetView =       "emptyDataSetView";
 
 - (CGPoint)dzn_offset
 {
-    CGFloat top = roundf(self.contentInset.top / 2.0);
     CGFloat left = roundf(self.contentInset.left / 2.0);
-    CGFloat bottom = roundf(self.contentInset.bottom / 2.0);
     CGFloat right = roundf(self.contentInset.right / 2.0);
     
     // Honors the scrollView's contentInset
-    CGPoint offset = CGPointMake(left-right, top-bottom);
+    CGPoint offset = CGPointMake(left-right, 0);
     
     if (self.emptyDataSetSource && [self.emptyDataSetSource respondsToSelector:@selector(offsetForEmptyDataSet:)]) {
         CGPoint customOffset = [self.emptyDataSetSource offsetForEmptyDataSet:self];
@@ -621,6 +619,21 @@ static NSString *dzn_implementationKey(id target, SEL selector)
     [UIView animateWithDuration:0.25
                      animations:^{_contentView.alpha = 1.0;}
                      completion:NULL];
+}
+
+- (void)layoutSubviews
+{
+    [super layoutSubviews];
+    
+    NSNumber *maxY = [self.superview.subviews bk_reduce:@0 withBlock:^id(NSNumber *max, UIView *sibiling) {
+        return sibiling == self || sibiling.isHidden || CGRectGetWidth(sibiling.bounds) != CGRectGetWidth(self.superview.bounds) ? max : @(MAX(max.doubleValue, CGRectGetMaxY(sibiling.frame)));
+    }];
+    
+    CGRect newFrame = self.frame;
+    newFrame.origin.y = maxY.doubleValue;
+    newFrame.size.height = CGRectGetHeight(self.superview.bounds) - [(UIScrollView *)self.superview contentInset].top - newFrame.origin.y;
+    
+    self.frame = newFrame;
 }
 
 #pragma mark - Getters
