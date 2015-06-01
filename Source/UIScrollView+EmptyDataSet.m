@@ -884,9 +884,6 @@ static NSString *dzn_implementationKey(id target, SEL selector)
     if ([self canShowButton]) {
         [views setObject:_button forKey:@"button"];
         [verticalSubviews addObject:@"[button]"];
-        
-        [self.contentView addConstraints:[NSLayoutConstraint constraintsWithVisualFormat:@"H:|-padding-[button]-padding-|"
-                                                                                 options:0 metrics:metrics views:views]];
     }
     // or removes from its superview
     else {
@@ -901,7 +898,7 @@ static NSString *dzn_implementationKey(id target, SEL selector)
     // Assign the vertical constraints to the content view
     if (verticalFormat.length > 0) {
         [self.contentView addConstraints:[NSLayoutConstraint constraintsWithVisualFormat:[NSString stringWithFormat:@"V:|%@|", verticalFormat]
-                                                                             options:0 metrics:metrics views:views]];
+                                                                             options:NSLayoutFormatAlignAllCenterX metrics:metrics views:views]];
     }
     
     [super updateConstraints];
