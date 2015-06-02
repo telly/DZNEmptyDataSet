@@ -626,7 +626,7 @@ static NSString *dzn_implementationKey(id target, SEL selector)
     [super layoutSubviews];
     
     NSNumber *maxY = [self.superview.subviews bk_reduce:@0 withBlock:^id(NSNumber *max, UIView *sibiling) {
-        return sibiling == self || sibiling.isHidden || CGRectGetWidth(sibiling.bounds) != CGRectGetWidth(self.superview.bounds) ? max : @(MAX(max.doubleValue, CGRectGetMaxY(sibiling.frame)));
+        return sibiling == self || sibiling.isHidden || [sibiling isKindOfClass:[UIImageView class]] ? max : @(MAX(max.doubleValue, CGRectGetMaxY(sibiling.frame)));
     }];
     
     CGRect newFrame = self.frame;
