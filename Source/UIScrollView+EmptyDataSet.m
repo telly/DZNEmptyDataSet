@@ -625,8 +625,16 @@ static NSString *dzn_implementationKey(id target, SEL selector)
 {
     [super layoutSubviews];
     
+    /** We want to be relative to supplementry views, but not cells.
+     */
+    BOOL(^sillyFilter)(UIView *) = ^BOOL(UIView *testView) {
+        return ([testView isKindOfClass:[UICollectionReusableView class]]
+                && ![testView isKindOfClass:[UICollectionViewCell class]]
+                && CGRectGetMinY(testView.frame) <= FLT_EPSILON);
+    };
+    
     NSNumber *maxY = [self.superview.subviews bk_reduce:@0 withBlock:^id(NSNumber *max, UIView *sibiling) {
-        return sibiling == self || sibiling.isHidden || [sibiling isKindOfClass:[UIImageView class]] ? max : @(MAX(max.doubleValue, CGRectGetMaxY(sibiling.frame)));
+        return sillyFilter(sibiling) ? @(MAX(max.doubleValue, CGRectGetMaxY(sibiling.frame))) : max;
     }];
     
     CGRect newFrame = self.frame;
