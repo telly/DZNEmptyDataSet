@@ -411,7 +411,7 @@ static char const * const kEmptyDataSetView =       "emptyDataSetView";
             [view.button setAttributedTitle:[self dzn_buttonTitleForState:UIControlStateHighlighted] forState:UIControlStateHighlighted];
             [view.button setBackgroundImage:[self dzn_buttonBackgroundImageForState:UIControlStateNormal] forState:UIControlStateNormal];
             [view.button setBackgroundImage:[self dzn_buttonBackgroundImageForState:UIControlStateHighlighted] forState:UIControlStateHighlighted];
-
+            
             // Configure spacing
             view.verticalSpace = [self dzn_verticalSpace];
         }
@@ -423,7 +423,7 @@ static char const * const kEmptyDataSetView =       "emptyDataSetView";
         view.backgroundColor = [self dzn_dataSetBackgroundColor];
         view.hidden = NO;
         
-        [view updateConstraints];
+        [view setNeedsLayout];
         [view layoutIfNeeded];
         
         // Configure scroll permission
@@ -462,7 +462,7 @@ static char const * const kEmptyDataSetView =       "emptyDataSetView";
 - (void)deviceDidChangeOrientation:(NSNotification *)notification
 {
     if (self.isEmptyDataSetVisible) {
-        [self.emptyDataSetView updateConstraints];
+        [self.emptyDataSetView setNeedsLayout];
         [self.emptyDataSetView layoutIfNeeded];
     }
 }
@@ -642,6 +642,45 @@ static NSString *dzn_implementationKey(id target, SEL selector)
     newFrame.size.height = CGRectGetHeight(self.superview.bounds) - [(UIScrollView *)self.superview contentInset].top - newFrame.origin.y;
     
     self.frame = newFrame;
+    
+    /* layout subviews */
+    self.contentView.frame = self.bounds;
+    
+    /* First, we simply stack them on one side of the view */
+    CGPoint center = {CGRectGetMidX(self.contentView.bounds), 0};
+    CGFloat totalHeight = 0;
+    
+    /* Here, we order the subviews */
+    NSMutableArray *subviews = [NSMutableArray array];
+    
+    if (self.customView) {
+        [subviews addObject:self.customView];
+    }
+    else {
+        if ([self canShowImage]) [subviews addObject:self.imageView];
+        if ([self canShowTitle]) [subviews addObject:self.titleLabel];
+        if ([self canShowDetail]) [subviews addObject:self.detailLabel];
+        if ([self canShowButton]) [subviews addObject:self.button];
+    }
+    
+    for (UIView *subview in subviews) {
+        
+        [subview sizeToFit];
+        totalHeight += subview.bounds.size.height;
+        totalHeight += self.verticalSpace;
+    }
+    
+    totalHeight -= self.verticalSpace;
+    
+    /* align them */
+    center.y = (CGRectGetHeight(self.contentView.bounds) - totalHeight) / 2;
+    
+    for (UIView *view in subviews) {
+        
+        center.y += CGRectGetHeight(view.bounds) / 2;
+        view.center = center;
+        center.y += CGRectGetHeight(view.bounds) / 2 + self.verticalSpace;
+    }
 }
 
 #pragma mark - Getters
@@ -651,7 +690,6 @@ static NSString *dzn_implementationKey(id target, SEL selector)
     if (!_contentView)
     {
         _contentView = [UIView new];
-        _contentView.translatesAutoresizingMaskIntoConstraints = NO;
         _contentView.backgroundColor = [UIColor clearColor];
         _contentView.userInteractionEnabled = YES;
         _contentView.alpha = 0;
@@ -664,7 +702,6 @@ static NSString *dzn_implementationKey(id target, SEL selector)
     if (!_imageView)
     {
         _imageView = [UIImageView new];
-        _imageView.translatesAutoresizingMaskIntoConstraints = NO;
         _imageView.backgroundColor = [UIColor clearColor];
         _imageView.contentMode = UIViewContentModeScaleAspectFit;
         _imageView.userInteractionEnabled = NO;
@@ -680,7 +717,6 @@ static NSString *dzn_implementationKey(id target, SEL selector)
     if (!_titleLabel)
     {
         _titleLabel = [UILabel new];
-        _titleLabel.translatesAutoresizingMaskIntoConstraints = NO;
         _titleLabel.backgroundColor = [UIColor clearColor];
         
         _titleLabel.font = [UIFont systemFontOfSize:27.0];
@@ -700,7 +736,6 @@ static NSString *dzn_implementationKey(id target, SEL selector)
     if (!_detailLabel)
     {
         _detailLabel = [UILabel new];
-        _detailLabel.translatesAutoresizingMaskIntoConstraints = NO;
         _detailLabel.backgroundColor = [UIColor clearColor];
         
         _detailLabel.font = [UIFont systemFontOfSize:17.0];
@@ -720,7 +755,6 @@ static NSString *dzn_implementationKey(id target, SEL selector)
     if (!_button)
     {
         _button = [UIButton buttonWithType:UIButtonTypeCustom];
-        _button.translatesAutoresizingMaskIntoConstraints = NO;
         _button.backgroundColor = [UIColor clearColor];
         _button.contentHorizontalAlignment = UIControlContentHorizontalAlignmentCenter;
         _button.contentVerticalAlignment = UIControlContentVerticalAlignmentCenter;
@@ -764,7 +798,6 @@ static NSString *dzn_implementationKey(id target, SEL selector)
     }
     
     _customView = view;
-    _customView.translatesAutoresizingMaskIntoConstraints = !CGRectIsEmpty(view.frame);
     [self.contentView addSubview:_customView];
 }
 
@@ -789,127 +822,6 @@ static NSString *dzn_implementationKey(id target, SEL selector)
     _imageView = nil;
     _button = nil;
     _customView = nil;
-}
-
-- (void)removeAllConstraints
-{
-    [self removeConstraints:self.constraints];
-    [_contentView removeConstraints:_contentView.constraints];
-}
-
-
-#pragma mark - UIView Constraints & Layout Methods
-
-- (void)updateConstraintsIfNeeded
-{
-    [super updateConstraintsIfNeeded];
-}
-
-- (void)updateConstraints
-{
-    // Cleans up any constraints
-    [self removeAllConstraints];
-    
-    NSMutableDictionary *views = [NSMutableDictionary dictionary];
-    
-    [views setObject:self forKey:@"self"];
-    [views setObject:self.contentView forKey:@"contentView"];
-    
-    [self addConstraints:[NSLayoutConstraint constraintsWithVisualFormat:@"H:[self]-(<=0)-[contentView]"
-                                                                 options:NSLayoutFormatAlignAllCenterY metrics:nil views:views]];
-    
-    [self addConstraints:[NSLayoutConstraint constraintsWithVisualFormat:@"V:[self]-(<=0)-[contentView]"
-                                                                 options:NSLayoutFormatAlignAllCenterX metrics:nil views:views]];
-    
-    // If a custom offset is available, we modify the contentView's constraints constants
-    if (!CGPointEqualToPoint(self.offset, CGPointZero) && self.constraints.count == 4) {
-        NSLayoutConstraint *vConstraint = self.constraints[1];
-        NSLayoutConstraint *hConstraint = [self.constraints lastObject];
-        
-        // the values must be inverted to follow the up-bottom and left-right directions
-        vConstraint.constant = self.offset.y*-1;
-        hConstraint.constant = self.offset.x*-1;
-    }
-    
-    if (_customView) {
-        [views setObject:_customView forKey:@"customView"];
-        [self.contentView addConstraints:[NSLayoutConstraint constraintsWithVisualFormat:@"H:|[customView]|" options:0 metrics:nil views:views]];
-        [self.contentView addConstraints:[NSLayoutConstraint constraintsWithVisualFormat:@"V:|[customView]|" options:0 metrics:nil views:views]];
-        
-        // Skips from any further configuration
-        return [super updateConstraints];;
-    }
-    
-    CGFloat width = CGRectGetWidth(self.frame) ? : CGRectGetWidth([UIScreen mainScreen].bounds);
-    NSNumber *padding =  [[UIDevice currentDevice] userInterfaceIdiom] == UIUserInterfaceIdiomPhone ? @20 : @(roundf(width/16.0));
-    NSNumber *imgWidth = @(roundf(_imageView.image.size.width));
-    NSNumber *imgHeight = @(roundf(_imageView.image.size.height));
-    NSNumber *trailing = @(roundf((width-[imgWidth floatValue])/2.0));
-    
-    NSDictionary *metrics = NSDictionaryOfVariableBindings(padding,trailing,imgWidth,imgHeight);
-    
-    // Since any element could be missing from displaying, we need to create a dynamic string format
-    NSMutableArray *verticalSubviews = [NSMutableArray new];
-    
-    // Assign the image view's horizontal constraints
-    if (_imageView.superview) {
-        [views setObject:_imageView forKey:@"imageView"];
-        [verticalSubviews addObject:@"[imageView(imgHeight)]"];
-        
-        [self.contentView addConstraints:[NSLayoutConstraint constraintsWithVisualFormat:@"H:|-trailing-[imageView(imgWidth)]-trailing-|"
-                                                                                 options:0 metrics:metrics views:views]];
-    }
-    
-    // Assign the title label's horizontal constraints
-    if ([self canShowTitle]) {
-        [views setObject:_titleLabel forKey:@"titleLabel"];
-        [verticalSubviews addObject:@"[titleLabel]"];
-        
-        [self.contentView addConstraints:[NSLayoutConstraint constraintsWithVisualFormat:@"H:|-padding-[titleLabel]-padding-|"
-                                                                                 options:0 metrics:metrics views:views]];
-    }
-    // or removes from its superview
-    else {
-        [_titleLabel removeFromSuperview];
-        _titleLabel = nil;
-    }
-    
-    // Assign the detail label's horizontal constraints
-    if ([self canShowDetail]) {
-        [views setObject:_detailLabel forKey:@"detailLabel"];
-        [verticalSubviews addObject:@"[detailLabel]"];
-        
-        [self.contentView addConstraints:[NSLayoutConstraint constraintsWithVisualFormat:@"H:|-padding-[detailLabel]-padding-|"
-                                                                                 options:0 metrics:metrics views:views]];
-    }
-    // or removes from its superview
-    else {
-        [_detailLabel removeFromSuperview];
-        _detailLabel = nil;
-    }
-    
-    // Assign the button's horizontal constraints
-    if ([self canShowButton]) {
-        [views setObject:_button forKey:@"button"];
-        [verticalSubviews addObject:@"[button]"];
-    }
-    // or removes from its superview
-    else {
-        [_button removeFromSuperview];
-        _button = nil;
-    }
-    
-
-    // Build the string format for the vertical constraints, adding a margin between each element. Default is 11.
-    NSString *verticalFormat = [verticalSubviews componentsJoinedByString:[NSString stringWithFormat:@"-(%.f)-", self.verticalSpace ?: 11]];
-    
-    // Assign the vertical constraints to the content view
-    if (verticalFormat.length > 0) {
-        [self.contentView addConstraints:[NSLayoutConstraint constraintsWithVisualFormat:[NSString stringWithFormat:@"V:|%@|", verticalFormat]
-                                                                             options:NSLayoutFormatAlignAllCenterX metrics:metrics views:views]];
-    }
-    
-    [super updateConstraints];
 }
 
 @end
